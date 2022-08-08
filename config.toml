@@ -1,0 +1,7 @@
+[server]
+ip="10.20.103.45"
+port=3000
+hostname="my.unitedstates.whatever"
+
+[dns]
+ip="10.20.0.1"
