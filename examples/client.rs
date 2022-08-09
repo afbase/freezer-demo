@@ -37,7 +37,11 @@ async fn pinger() {
     let config = read_config_file();
     let port_string = config.server.port.to_string();
     let port = port_string.as_str();
-    let url = config.server.hostname + ":" + port + "/ping";
+
+    let url_string = format!("http://{}:{}/ping", config.server.ip, port);
+    println!("url_string: {}", url_string);
+    let url = reqwest::Url::parse(url_string.as_str()).unwrap();
+    println!("host:  {}", url_string);
     let connection_timeout_duration = core::time::Duration::from_secs(2);
     let client = reqwest::Client::builder()
         .connect_timeout(connection_timeout_duration)
@@ -49,13 +53,14 @@ async fn pinger() {
             let status_str = status.as_str();
             println!("Response: {}, {}", resp.text().await.unwrap(), status_str);
         }
-        _ => {
-            println!("Response: connection timed out");
+        Err(e) => {
+            println!("Response Error: {}", e);
         }
     }
 }
 
 fn read_config_file() -> Root {
+    let mut result = Root::default();
     // Read the contents of the file using a `match` block
     // to return the `data: Ok(c)` as a `String`
     // or handle any `errors: Err(_)`.
@@ -76,23 +81,28 @@ fn read_config_file() -> Root {
     // file `contents` as a `Data struct: Ok(d)`
     // or handle any `errors: Err(_)`.
     match toml::from_str(&contents) {
-        Ok::<Root, _>(d) => d,
+        Ok::<Root, _>(d) => {
+            println!("toml object: {:?}", d);
+            result = d;
+        }
         Err(_) => {
             // Write `msg` to `stderr`.
             panic!("Unable to load data from `{}`", FILENAME);
         }
     };
-    Root::default()
+    println!("result object: {:?}", result);
+    result
 }
 
 #[tokio::main]
 async fn main() {
     println!("7 eves pingers FTW!!!");
-    let _forever = task::spawn(async {
-        let mut interval = time::interval(time::Duration::from_millis(10));
+    let forever = task::spawn(async {
+        let mut interval = time::interval(time::Duration::from_secs(1));
         loop {
             interval.tick().await;
             pinger().await;
         }
     });
+    forever.await;
 }
